@@ -268,11 +268,17 @@ GitHub Codespaces se puede conectar a PhpStorm de varias formas:
 2. **Configurar SSH en tu máquina local**
    - Añade la configuración copiada a tu archivo `~/.ssh/config`.
 
-3. **Conectar desde PhpStorm**
+3. **Configurar Remote Development en PhpStorm**
    - Abre PhpStorm.
    - Ve a `File > Remote Development > SSH`.
-   - Añade una nueva conexión usando el host del Codespace.
-   - Selecciona el directorio del proyecto.
+   - Haz clic en `New Connection`.
+   - En el campo `Host`, introduce el nombre del host de tu Codespace (aparece en tu `~/.ssh/config`, normalmente algo como `cs-usuario-repo-xxxxx`).
+   - El `Username` normalmente es `codespace` o el que aparezca en tu configuración SSH.
+   - El `Port` suele ser `22` (el predeterminado).
+   - En `Authentication type`, selecciona `OpenSSH config and authentication agent`.
+   - Haz clic en `Check Connection and Continue` para verificar la conexión.
+   - Selecciona el directorio del proyecto en el Codespace (normalmente `/workspaces/nombre-del-repo`).
+   - Haz clic en `Download IDE and Connect` para descargar PhpStorm en el servidor remoto y conectarte.
 
 ### Opción 3: GitHub CLI
 

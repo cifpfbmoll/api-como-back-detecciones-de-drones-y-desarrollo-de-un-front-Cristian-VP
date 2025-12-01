@@ -242,7 +242,7 @@ GitHub Codespaces se puede conectar a PhpStorm de varias formas:
 ### Opción 1: JetBrains Gateway (Recomendado)
 
 1. **Instalar JetBrains Gateway**
-   - Descarga [JetBrains Gateway](https://www.jetbrains.com/remote-development/gateway/) desde la web oficial de JetBrains.
+   - Descarga [JetBrains Gateway](https://www.jetbrains.com/remote-development/gateway/) desde el sitio web oficial de JetBrains.
    - Instala la aplicación en tu ordenador local.
 
 2. **Instalar la extensión GitHub Codespaces**
@@ -262,7 +262,7 @@ GitHub Codespaces se puede conectar a PhpStorm de varias formas:
 1. **Obtener credenciales SSH del Codespace**
    - Abre tu Codespace en el navegador.
    - Abre el terminal integrado.
-   - Ejecuta: `gh codespace ssh --config`
+   - Ejecuta: `gh codespace ssh --config` (requiere tener GitHub CLI autenticado con `gh auth login`).
    - Copia la configuración SSH que aparece.
 
 2. **Configurar SSH en tu máquina local**
@@ -304,7 +304,7 @@ GitHub Codespaces se puede conectar a PhpStorm de varias formas:
 ### Notas importantes
 
 - Asegúrate de que tu Codespace esté activo antes de intentar conectarte.
-- JetBrains Gateway requiere una suscripción activa a JetBrains o licencia de PhpStorm.
+- JetBrains Gateway es gratuito, pero PhpStorm requiere una licencia válida (de pago o educativa).
 - La primera conexión puede tardar unos minutos mientras se configura el entorno remoto.
 
 ## Licencia

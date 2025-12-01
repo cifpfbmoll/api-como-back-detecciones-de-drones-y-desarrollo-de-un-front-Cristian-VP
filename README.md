@@ -235,6 +235,78 @@ php spark routes
 - **Base de datos**: SQLite3
 - **PHP**: 8.1+
 
+## Conectar Codespaces con PhpStorm
+
+GitHub Codespaces se puede conectar a PhpStorm de varias formas:
+
+### Opción 1: JetBrains Gateway (Recomendado)
+
+1. **Instalar JetBrains Gateway**
+   - Descarga [JetBrains Gateway](https://www.jetbrains.com/remote-development/gateway/) desde la web oficial de JetBrains.
+   - Instala la aplicación en tu ordenador local.
+
+2. **Instalar la extensión GitHub Codespaces**
+   - Abre JetBrains Gateway.
+   - Ve a la sección de plugins/extensiones.
+   - Busca e instala "GitHub Codespaces".
+
+3. **Conectar con tu Codespace**
+   - En JetBrains Gateway, selecciona "GitHub Codespaces" en la lista de conexiones.
+   - Inicia sesión con tu cuenta de GitHub.
+   - Selecciona el Codespace de este repositorio de la lista.
+   - Elige PhpStorm como el IDE a utilizar.
+   - Gateway descargará e iniciará PhpStorm conectado a tu Codespace.
+
+### Opción 2: SSH con PhpStorm
+
+1. **Obtener credenciales SSH del Codespace**
+   - Abre tu Codespace en el navegador.
+   - Abre el terminal integrado.
+   - Ejecuta: `gh codespace ssh --config`
+   - Copia la configuración SSH que aparece.
+
+2. **Configurar SSH en tu máquina local**
+   - Añade la configuración copiada a tu archivo `~/.ssh/config`.
+
+3. **Conectar desde PhpStorm**
+   - Abre PhpStorm.
+   - Ve a `File > Remote Development > SSH`.
+   - Añade una nueva conexión usando el host del Codespace.
+   - Selecciona el directorio del proyecto.
+
+### Opción 3: GitHub CLI
+
+1. **Instalar GitHub CLI**
+   ```bash
+   # macOS
+   brew install gh
+   
+   # Windows
+   winget install GitHub.cli
+   
+   # Linux (Debian/Ubuntu)
+   sudo apt install gh
+   ```
+
+2. **Autenticarse con GitHub**
+   ```bash
+   gh auth login
+   ```
+
+3. **Conectar al Codespace vía SSH**
+   ```bash
+   gh codespace ssh
+   ```
+
+4. **Abrir en PhpStorm**
+   - Usa `Remote Development` en PhpStorm con la conexión SSH establecida.
+
+### Notas importantes
+
+- Asegúrate de que tu Codespace esté activo antes de intentar conectarte.
+- JetBrains Gateway requiere una suscripción activa a JetBrains o licencia de PhpStorm.
+- La primera conexión puede tardar unos minutos mientras se configura el entorno remoto.
+
 ## Licencia
 
 Proyecto educativo - Desarrollo en Entorno Servidor - 2º Grado en Ingeniería Informática

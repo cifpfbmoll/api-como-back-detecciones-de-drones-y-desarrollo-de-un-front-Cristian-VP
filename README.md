@@ -1,15 +1,5 @@
 # Cliente de Detección de Drones (PoC)
 
-## 📚 Documentación de Referencia Rápida
-
-| Documento | Contenido |
-|-----------|----------|
-| **[CURL_COMMANDS.md](CURL_COMMANDS.md)** | 📋 Todos los comandos CURL con ejemplos de respuesta |
-| **[SCREENSHOTS_GALLERY.md](SCREENSHOTS_GALLERY.md)** | 📸 Galería de capturas de pantalla (6 tests + dashboard) |
-| **[README.md](README.md)** | 📖 Este documento (arquitectura y PoC) |
-
----
-
 ## 1. Visión General del Proyecto
 
 Este proyecto es una **Prueba de Concepto (PoC)** de un Cliente Angular moderno que interactúa con la API `drones-api` (backend CodeIgniter 4). 

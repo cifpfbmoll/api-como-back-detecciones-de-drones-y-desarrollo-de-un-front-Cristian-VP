@@ -1,0 +1,59 @@
+### Health Check - GET detections (basic connectivity test)
+GET http://localhost:8080/api/v1/detections
+Accept: application/json
+
+###
+### Create Detection - POST new drone detection
+POST http://localhost:8080/api/v1/detections
+Content-Type: application/json
+
+{
+  "mac": "60:60:1F:AA:BB:CC",
+  "rssi": -50,
+  "sensor_location": "Building A - Floor 3",
+  "timestamp": "2024-01-15T10:30:00Z"
+}
+
+###
+### Create Another Detection - Duplicate MAC (will be flagged as BLOCKED)
+POST http://localhost:8080/api/v1/detections
+Content-Type: application/json
+
+{
+  "mac": "60:60:1F:AA:BB:CC",
+  "rssi": -65,
+  "sensor_location": "Building B - Floor 1",
+  "timestamp": "2024-01-15T10:35:00Z"
+}
+
+###
+### Create Third Detection - Different Drone
+POST http://localhost:8080/api/v1/detections
+Content-Type: application/json
+
+{
+  "mac": "AA:AA:AA:AA:AA:AA",
+  "rssi": -45,
+  "sensor_location": "Building A - Floor 1",
+  "timestamp": "2024-01-15T10:40:00Z"
+}
+
+###
+### Get All Manufacturers
+GET http://localhost:8080/api/v1/manufacturers
+Accept: application/json
+
+###
+### Get Stats
+GET http://localhost:8080/api/v1/stats
+Accept: application/json
+
+###
+### Get Latest Detections
+GET http://localhost:8080/api/v1/detections/latest
+Accept: application/json
+
+###
+### Paginated Detections
+GET http://localhost:8080/api/v1/detections?page=1&limit=10
+Accept: application/json

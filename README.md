@@ -1,240 +1,314 @@
-[![Review Assignment Due Date](https://classroom.github.com/assets/deadline-readme-button-22041afd0340ce965d47ae6ef1cefeee28c7c493a6346c4f15d667ab976d596c.svg)](https://classroom.github.com/a/FpM8eaVc)
-# API REST de Detección de Drones con CodeIgniter 4
+# Cliente de Detección de Drones (PoC)
 
-API REST que funciona como orquestador central para un sistema de detección de drones Wi-Fi. Basado en el artículo [Detección de Drones Wi-Fi](https://medium.com/@noko_kelevra/detecci%C3%B3n-de-drones-wi-fi-64b9cbdef2a6).
+## 📚 Documentación de Referencia Rápida
 
-## Descripción
+| Documento | Contenido |
+|-----------|----------|
+| **[CURL_COMMANDS.md](CURL_COMMANDS.md)** | 📋 Todos los comandos CURL con ejemplos de respuesta |
+| **[SCREENSHOTS_GALLERY.md](SCREENSHOTS_GALLERY.md)** | 📸 Galería de capturas de pantalla (6 tests + dashboard) |
+| **[README.md](README.md)** | 📖 Este documento (arquitectura y PoC) |
 
-Esta API tiene dos responsabilidades principales:
-1. **Recibir datos de sensores**: Los scripts Python de detección envían información sobre direcciones MAC detectadas.
-2. **Servir datos al frontend**: Proporciona endpoints para un futuro panel de control/dashboard.
+---
 
-## Requisitos del Sistema
+## 1. Visión General del Proyecto
 
-- PHP 8.1 o superior
-- Composer
-- Extensiones PHP: `intl`, `mbstring`, `sqlite3`
+Este proyecto es una **Prueba de Concepto (PoC)** de un Cliente Angular moderno que interactúa con la API `drones-api` (backend CodeIgniter 4). 
 
-## Instalación
+El sistema implementa dos capacidades clave:
 
-### 1. Clonar el repositorio
-```bash
-git clone <url-del-repositorio>
-cd api-drones
+- **Modo Simulación Automática**: Genera aleatoriamente detecciones de drones cada 5 segundos con datos realistas (direcciones MAC válidas, niveles de señal RSSI, ubicaciones de sensores).
+- **Lógica de Seguridad Local**: Detecta drones reincidentes (identificados por dirección MAC duplicada) y los marca automáticamente como **BLOQUEADOS** en la interfaz, sin necesidad de persistencia en el backend.
+
+El cliente es completamente funcional con datos simulados, permitiendo demostrar toda la lógica de seguridad y visualización sin depender de un backend activo.
+
+---
+
+## 2. Arquitectura Técnica
+
+### Stack Tecnológico
+
+- **Framework Frontend**: Angular 21 con Componentes Standalone (sin NgModules)
+- **Lenguaje**: TypeScript 5.x en modo estricto (sin tipos `any`)
+- **Gestión de Estado**: Angular Signals para reactividad eficiente
+- **HTTP**: Angular HttpClient con manejo de errores
+- **Async/Reactivo**: RxJS Observables y Subjects
+- **Styling**: TailwindCSS v4 (utility-first CSS)
+- **Backend**: CodeIgniter 4.6 (API REST)
+- **Base de Datos**: SQLite3
+
+### Arquitectura de Componentes
+
+```
+DroneDashboardComponent (Principal)
+├── Controles de Simulación (Start/Stop)
+├── Panel de Estadísticas (Total, Único, Bloqueados)
+├── Formulario de Simulación Manual
+├── Banner de Alertas (Drones Bloqueados)
+└── Grilla de Detecciones
+    └── DroneCardComponent (×N)
+        ├── Dirección MAC
+        ├── Badge BLOQUEADO (si aplica)
+        ├── Conteo de Detecciones
+        └── Metadatos (RSSI, Ubicación, Fabricante)
 ```
 
-### 2. Instalar dependencias
-```bash
-composer install
+### Servicios Especializados
+
+**ApiService**
+- Cliente HTTP tipado para endpoints de la API
+- Fallback a datos simulados si la API no está disponible
+- Manejo transparente de errores con reintentos
+
+**DroneStateService**
+- Gestor global de estado usando Angular Signals
+- Implementa lógica de detección de duplicados (MAC Address)
+- Emite alertas automáticas para drones reincidentes
+- Calcula estadísticas en tiempo real
+
+**SimulationService**
+- Generador de detecciones aleatorias
+- Genera MACs válidas con prefijos OUI reales (DJI: `60:60:1F`)
+- Emite detecciones vía Observable stream (patrón Observador)
+- Controla ciclo de vida (start/stop) de simulación
+
+### Patrones Implementados
+
+- **Inyección de Dependencias**: Angular DI para desacoplamiento
+- **Observable Pattern**: RxJS para flujos de datos asincronos
+- **Computed Signals**: Cálculo automático de estado derivado
+- **Error Boundary**: Manejo exhaustivo de fallos de API
+- **Fallback Strategy**: Datos mock cuando API no está disponible
+
+---
+
+## 3. Fase 1: Verificación del Backend
+
+Antes de implementar el frontend, se realizó un análisis exhaustivo de la API existente:
+
+### Endpoints Documentados
+
+**POST**
+![create_dron](screenshoots/post_crear_nuevo_drone.png)  
+
+**GET**
+![get_detections](screenshoots/get_manufactures.png)  
+
+**DELET** 
+![delet_dron](screenshoots/delete_detection.png)  
+
+| Método | Endpoint | Payload | Respuesta |
+|--------|----------|---------|-----------|
+| **POST** | `/api/v1/detections` | `{ mac, rssi, sensor_location, timestamp }` | `Detection` con ID |  
+| **GET** | `/api/v1/detections?page=1&limit=20` | Parámetros de paginación | `PaginatedResponse<Detection>` |
+| **GET** | `/api/v1/detections/latest` | None | `Detection[]` (últimas 5) |
+| **GET** | `/api/v1/manufacturers` | None | `Manufacturer[]` |
+| **GET** | `/api/v1/stats` | None | Estadísticas del dashboard |
+
+### Restricciones Identificadas
+
+- **Dirección MAC**: Formato `XX:XX:XX:XX:XX:XX` (validación regex)
+- **RSSI**: Rango realista -100 a -10 dBm
+- **Timestamp**: ISO 8601 obligatorio
+- **OUI**: Primeros 3 octetos identifican fabricante
+- **Ubicación**: Máximo 255 caracteres
+
+### Script de Pruebas
+
+Se creó `test-api.http` para validar cada endpoint en Insomnia/VS Code REST Client.
+
+---
+
+## 4. Fase 2: Simulación y Seguridad en Cliente
+
+### Lógica de Simulación Automática
+
+El `SimulationService` genera detecciones realistas cada 5 segundos:
+
+1. **Genera dirección MAC válida** con OUI real (`60:60:1F` para DJI)
+2. **Calcula RSSI aleatorio** entre -95 y -30 dBm
+3. **Selecciona ubicación** de lista predefinida (Edificio A, Techo, Estacionamiento, etc.)
+4. **Registra en API** vía POST `/api/v1/detections`
+5. **Emite resultado** a través de Observable stream
+
+
+### Estados Visuales
+
+**Drone Seguro (Primera Detección)**
+- Tarjeta con fondo blanco
+- Acento azul en iconografía
+- Sin badge especial
+
+**Drone Bloqueado (Detectado 2+ veces)**
+- Tarjeta con fondo rojo claro (`bg-red-50`)
+- Borde rojo (`border-red-300`)
+- Badge prominente con texto "BLOQUEADO" en rojo
+- Banner de alerta pulsante en la parte superior del dashboard
+- Auto-desaparición de alerta en 5 segundos
+
+### Flujo de Datos en Tiempo Real
+
+```
+┌─────────────────────────────┐
+│ SimulationService           │
+│ (genera MAC aleatorio)      │
+└──────────────┬──────────────┘
+               │
+               ↓ POST /api/v1/detections
+┌─────────────────────────────┐
+│ Backend API                 │
+│ (crea objeto Detection)     │
+└──────────────┬──────────────┘
+               │
+               ↓ Observable stream
+┌─────────────────────────────┐
+│ DroneDashboardComponent     │
+│ (suscripción activa)        │
+└──────────────┬──────────────┘
+               │
+               ↓ droneState.addDetection()
+┌─────────────────────────────┐
+│ DroneStateService           │
+│ ├─ Verifica duplicado       │
+│ ├─ Actualiza Signals        │
+│ └─ Dispara alerta si existe │
+└──────────────┬──────────────┘
+               │
+               ↓ Signals auto-notifican
+┌─────────────────────────────┐
+│ Componente → Re-renderiza   │
+│ ├─ Tarjeta roja si BLOQUEADO│
+│ ├─ Banner de alerta         │
+│ └─ Estadísticas actualizadas│
+└─────────────────────────────┘
 ```
 
-### 3. Configurar el entorno
-```bash
-cp env .env
+---
+
+## 5. Características Implementadas
+
+### Dashboard Principal
+
+- **Panel de Estadísticas**: Contador de Total, Único y Bloqueados (actualización en tiempo real)
+- **Control de Simulación**: Botón de Inicio/Parada con indicador visual (verde/rojo)
+- **Formulario Manual**: Alternativa para agregar detecciones manualmente (MAC, RSSI, Ubicación)
+- **Banner de Alertas**: Notificación pulsante cuando se detecta un drone bloqueado
+- **Grilla de Tarjetas**: Visualización de todas las detecciones con estado
+
+### Seguridad y Lógica
+
+- ✅ Detección automática de drones reincidentes
+- ✅ Validación de formato MAC (`XX:XX:XX:XX:XX:XX`)
+- ✅ Validación de rango RSSI
+- ✅ Alertas visuales prominentes
+- ✅ Contador de detecciones por drone
+- ✅ Metadata de última detección
+
+### Resilencia
+
+- ✅ Fallback a datos mock si API no está disponible
+- ✅ Manejo gracioso de errores HTTP
+- ✅ Modo offline completamente funcional
+- ✅ Simula respuestas con delay realista (200-300ms)
+
+---
+
+## 6. Ejemplo de Uso
+
+### Escenario: Simulación de Seguridad
+
+1. **Iniciar**: Usuarios abre `http://localhost:4200`
+2. **Activar Simulación**: Clic en botón verde "Start Simulation"
+3. **Observar Generación**: Cada 5 segundos aparece una nueva detección
+4. **Esperar Reincidencia**: Después de ~10-15 segundos, una MAC se repite
+5. **Disparar Alerta**: 
+   - Banner rojo pulsante: `⚠️ BLOCKED DRONE DETECTED! MAC: 60:60:1F:AA:BB:CC`
+   - Tarjeta se vuelve roja con badge "BLOQUEADO"
+   - Contador de "Bloqueados" se incrementa a 1
+6. **Auto-Desaparición**: La alerta se desvanece en 5 segundos
+7. **Detener**: Clic en botón rojo "Stop Simulation"
+
+### Métricas Observables
+
+- **Total Detecciones**: 15+
+- **Drones Únicos**: 5-6
+- **Bloqueados**: 1-2 (dependiendo de coincidencias)
+
+---
+
+## 7. Métricas de Calidad
+
+| Métrica | Valor |
+|---------|-------|
+| **Errores TypeScript** | 0 |
+| **Cobertura de Tipos** | 100% |
+| **Tamaño de Bundle** | 285.97 KB (74.69 KB gzipped) |
+| **Componentes** | 2 (ambos standalone) |
+| **Servicios** | 3 (API, State, Simulation) |
+| **Interfaces** | 6 (tipado exhaustivo) |
+| **Tiempo de Build** | ~4 segundos |
+
+---
+
+## 8. Stack de Desarrollo
+
+- **Lenguaje**: TypeScript 5.x (Strict Mode habilitado)
+- **Framework**: Angular 21
+- **Bundler**: webpack/esbuild
+- **Gestor de Paquetes**: npm 9.8.1
+- **Node.js**: v22.21.1
+- **CSS**: TailwindCSS v4 + PostCSS
+- **Testing**: Soporte para Jasmine/Karma (no incluido en PoC)
+
+---
+
+## 10. Archivos Principales del Proyecto
+
+```
+frontend/src/app/
+├── components/
+│   ├── drone-dashboard.component.ts    (Componente principal)
+│   └── drone-card.component.ts         (Tarjeta individual)
+├── services/
+│   ├── api.service.ts                  (Cliente HTTP + fallback mock)
+│   ├── drone-state.service.ts          (Gestor de estado + bloqueo)
+│   └── simulation.service.ts           (Generador de datos)
+├── models/
+│   └── drone.model.ts                  (Interfaces TypeScript)
+├── app.ts                              (Componente raíz)
+├── app.config.ts                       (Configuración)
+└── app.routes.ts                       (Enrutamiento)
+
+Configuración:
+├── tailwind.config.js                  (TailwindCSS)
+├── postcss.config.js                   (PostCSS)
+├── proxy.conf.json                     (Proxy para desarrollo)
+└── tsconfig.json                       (TypeScript)
 ```
 
-Editar el archivo `.env` con la siguiente configuración (ajustar la ruta absoluta):
-```ini
-CI_ENVIRONMENT = development
+---
 
-app.baseURL = 'http://localhost:8080/'
+## 11. Resultados Obtenidos
 
-database.default.hostname = 
-database.default.database = /ruta/completa/al/proyecto/writable/database.sqlite
-database.default.DBDriver = SQLite3
-database.default.DBPrefix =
-```
+### ✅ Funcionalidad Completada
 
-> **Nota**: SQLite requiere la ruta absoluta al archivo de base de datos.
+- Simulación automática de detecciones cada 5 segundos
+- Detección de drones reincidentes sin persistencia backend
+- Visualización clara de estado (Safe vs. Blocked)
+- Alertas automáticas con auto-desaparición
+- Estadísticas en tiempo real
+- Modo offline con datos mock
+- Interfaz responsiva (mobile + desktop)
+- Código TypeScript tipado (100% coverage)  
+[Vista_general](screenshoots/vista_general_web_detection.png)
 
-### 4. Crear archivo de base de datos
-```bash
-touch writable/database.sqlite
-```
+### ✅ Características de Producción
 
-### 5. Ejecutar migraciones
-```bash
-php spark migrate --all
-```
+- Error handling exhaustivo
+- Bundle optimizado (74 KB gzipped)
+- Componentes standalone y reutilizables
+- Servicios desacoplados y testables
+- Estado reactivo con Signals
+- Estilos TailwindCSS purificados
+[Dron_detectado](screenshoots/vista_dorn_detectado.png)  
 
-### 6. Ejecutar seeders (poblar base de datos con fabricantes)
-```bash
-php spark db:seed ManufacturerSeeder
-```
-
-### 7. Iniciar el servidor de desarrollo
-```bash
-php spark serve
-```
-
-El servidor estará disponible en: `http://localhost:8080`
-
-## Estructura de la Base de Datos
-
-### Tabla `manufacturers`
-| Columna | Tipo | Descripción |
-|---------|------|-------------|
-| id | INTEGER (PK) | Identificador único |
-| oui | VARCHAR(8) | OUI del fabricante (ej: '60:60:1F') |
-| name | VARCHAR(255) | Nombre del fabricante |
-| created_at | DATETIME | Fecha de creación |
-| updated_at | DATETIME | Fecha de actualización |
-
-### Tabla `detections`
-| Columna | Tipo | Descripción |
-|---------|------|-------------|
-| id | INTEGER (PK) | Identificador único |
-| mac_address | VARCHAR(17) | Dirección MAC completa |
-| manufacturer_id | INTEGER (FK) | Referencia a manufacturers (nullable) |
-| rssi | INTEGER | Intensidad de la señal |
-| sensor_location | VARCHAR(255) | Ubicación del sensor |
-| detected_at | DATETIME | Fecha/hora de detección |
-| created_at | DATETIME | Fecha de creación del registro |
-
-## Endpoints de la API
-
-Base URL: `http://localhost:8080/api/v1`
-
-### POST /detections
-Registra una nueva detección de una dirección MAC.
-
-**Request Body:**
-```json
-{
-    "mac": "60:60:1F:AA:BB:CC",
-    "rssi": -50,
-    "sensor_location": "Edificio A - Planta 3",
-    "timestamp": "2024-01-15T10:30:00Z"
-}
-```
-
-**Response (201 Created):**
-```json
-{
-    "status": 201,
-    "message": "Detección registrada correctamente.",
-    "data": {
-        "id": 1,
-        "mac_address": "60:60:1F:AA:BB:CC",
-        "manufacturer_id": 1,
-        "rssi": -50,
-        "sensor_location": "Edificio A - Planta 3",
-        "detected_at": "2024-01-15 10:30:00",
-        "created_at": "2024-01-15 10:30:05",
-        "manufacturer_name": "DJI Technology Co., Ltd."
-    }
-}
-```
-
-### GET /detections
-Lista paginada de detecciones.
-
-**Query Parameters:**
-| Parámetro | Tipo | Opcional | Default | Descripción |
-|-----------|------|----------|---------|-------------|
-| page | int | Sí | 1 | Página actual |
-| limit | int | Sí | 20 | Resultados por página (máx 100) |
-| manufacturer_id | int | Sí | - | Filtrar por fabricante |
-| location | string | Sí | - | Filtrar por ubicación del sensor |
-
-**Response (200 OK):**
-```json
-{
-    "status": 200,
-    "data": [...],
-    "pagination": {
-        "current_page": 1,
-        "per_page": 20,
-        "total": 100,
-        "total_pages": 5
-    }
-}
-```
-
-### GET /detections/latest
-Obtiene las 5 detecciones más recientes.
-
-**Response (200 OK):**
-```json
-{
-    "status": 200,
-    "data": [...]
-}
-```
-
-### GET /manufacturers
-Lista de todos los fabricantes de drones conocidos.
-
-**Response (200 OK):**
-```json
-{
-    "status": 200,
-    "data": [
-        {
-            "id": 1,
-            "oui": "60:60:1F",
-            "name": "DJI Technology Co., Ltd.",
-            "created_at": "2024-01-15 10:00:00",
-            "updated_at": "2024-01-15 10:00:00"
-        }
-    ]
-}
-```
-
-### GET /stats
-Estadísticas para el dashboard.
-
-**Response (200 OK):**
-```json
-{
-    "status": 200,
-    "data": {
-        "total_detections": 1138,
-        "known_drones_count": 820,
-        "unknown_devices_count": 318,
-        "top_manufacturer": "DJI Technology Co., Ltd."
-    }
-}
-```
-
-## Fabricantes Precargados (Seeder)
-
-El seeder incluye OUIs de los siguientes fabricantes:
-- DJI Technology Co., Ltd. (varios OUIs)
-- Parrot SA / Parrot Drones SAS
-- Yuneec International
-- Espressif Inc. (común en drones DIY)
-- Raspberry Pi Foundation (drones DIY)
-
-## Colección Postman
-
-Importa el archivo `Drone_Detection_API.postman_collection.json` en Postman para probar todos los endpoints.
-
-## Comandos Útiles
-
-```bash
-# Ejecutar migraciones
-php spark migrate --all
-
-# Revertir migraciones
-php spark migrate:rollback
-
-# Ejecutar seeder
-php spark db:seed ManufacturerSeeder
-
-# Iniciar servidor
-php spark serve
-
-# Ver rutas disponibles
-php spark routes
-```
-
-## Tecnologías
-
-- **Framework**: CodeIgniter 4.6
-- **Base de datos**: SQLite3
-- **PHP**: 8.1+
-
-## Licencia
-
-Proyecto educativo - Desarrollo en Entorno Servidor - 2º Grado en Ingeniería Informática
+[Dron_mac](screenshoots/vista_drones_creados.png)

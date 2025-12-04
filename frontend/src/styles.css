@@ -1,0 +1,17 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Global Styles */
+* {
+  @apply box-border;
+}
+
+body {
+  @apply font-sans antialiased;
+}
+
+html, body {
+  @apply h-full m-0 p-0;
+}
+
